@@ -1,0 +1,20 @@
+[Unit]
+Description=Encompass AI Agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/encompass-ai-agent
+EnvironmentFile=/etc/encompass-ai-agent/env
+ExecStart=/opt/encompass-ai-agent/.venv/bin/encompass-ai-agent
+User=encompass-agent
+Group=encompass-agent
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/encompass-ai-agent /var/log/encompass-ai-agent
+
+[Install]
+WantedBy=multi-user.target

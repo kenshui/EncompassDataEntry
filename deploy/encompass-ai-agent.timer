@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Encompass AI Agent daily
+
+[Timer]
+OnCalendar=*-*-* 02:00:00
+Persistent=true
+Unit=encompass-ai-agent.service
+
+[Install]
+WantedBy=timers.target
