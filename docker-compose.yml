@@ -1,0 +1,17 @@
+services:
+  encompass-ai-agent:
+    build:
+      context: .
+    image: encompass-ai-agent:latest
+    container_name: encompass-ai-agent
+    env_file:
+      - .env
+    environment:
+      AGENT_DATABASE_PATH: /data/encompass_ai_agent.sqlite3
+      AGENT_DOWNLOAD_DIR: /data/downloads
+      AGENT_LOG_PATH: /data/agent-events.jsonl
+      AGENT_FIELD_MAPPING_PATH: /app/config/field_mapping.json
+    volumes:
+      - ./data:/data
+      - ./config/field_mapping.json:/app/config/field_mapping.json:ro
+    restart: "no"

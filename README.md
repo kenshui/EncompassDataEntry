@@ -133,6 +133,35 @@ When field mappings and permissions are verified:
 AGENT_DRY_RUN=false encompass-ai-agent
 ```
 
+## Docker
+
+Build the image:
+
+```bash
+docker build -t encompass-ai-agent:local .
+```
+
+Run a one-off dry run with local configuration and a persistent data volume:
+
+```bash
+docker run --rm \
+  --env-file .env \
+  -v "$PWD/config:/app/config:ro" \
+  -v "$PWD/data:/data" \
+  encompass-ai-agent:local --dry-run
+```
+
+Or use Docker Compose:
+
+```bash
+docker compose up --build encompass-ai-agent
+```
+
+The container runs as a non-root user. Container defaults store SQLite,
+downloaded PDFs, and JSONL logs under `/data`; `docker-compose.yml` mounts that
+path to the local `data/` directory and mounts `config/field_mapping.json` into
+the container as read-only configuration.
+
 ## Scheduling
 
 Example systemd units are in `deploy/`.
