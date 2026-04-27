@@ -8,11 +8,11 @@ The agent is designed for customer private-network deployments:
 
 - runs on a daily schedule with systemd timers or any enterprise scheduler;
 - authenticates with Encompass using instance, smart client user/password,
-  client ID, client secret, and API server;
+client ID, client secret, and API server;
 - persists every attachment in SQLite with a processed flag;
 - downloads and reads only unprocessed PDFs;
 - supports OpenAI-compatible private AI endpoints or a deterministic regex
-  fallback for testing;
+fallback for testing;
 - writes auditable event logs to SQLite and JSONL.
 
 ## Workflow
@@ -21,7 +21,7 @@ The agent is designed for customer private-network deployments:
 2. Scan loans modified or created within the configured lookback window.
 3. Retrieve attachment metadata for each loan.
 4. Store `loan_id`, `attachment_id`, title, created date, created by, and
-   processing status.
+  processing status.
 5. Skip attachments already processed by this agent.
 6. Download new PDF attachments.
 7. Extract the configured fields from PDF text.
@@ -153,9 +153,9 @@ application under `/opt/encompass-ai-agent` and an environment file at
 SQLite tables are created automatically:
 
 - `loan_attachments`: one row per loan attachment, including title, created
-  date, created by, processed flag, processed timestamp, and last error.
+date, created by, processed flag, processed timestamp, and last error.
 - `processing_events`: append-only processing log with extracted and mapped
-  field JSON.
+field JSON.
 
 The agent also writes JSONL events to `AGENT_LOG_PATH` for SIEM ingestion or
 operational review.
