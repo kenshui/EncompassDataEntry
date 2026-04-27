@@ -162,6 +162,12 @@ downloaded PDFs, and JSONL logs under `/data`; `docker-compose.yml` mounts that
 path to the local `data/` directory and mounts `config/field_mapping.json` into
 the container as read-only configuration.
 
+## n8n workflow
+
+An importable n8n implementation is available at
+`workflows/encompass-ai-agent.n8n.json`. Setup instructions are in
+`docs/n8n/encompass-ai-agent.md`.
+
 ## Scheduling
 
 Example systemd units are in `deploy/`.

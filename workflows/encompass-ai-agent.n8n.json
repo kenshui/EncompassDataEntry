@@ -1,0 +1,782 @@
+{
+  "name": "Encompass AI Agent - Daily Document Extraction",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24,
+              "triggerAtHour": 2
+            }
+          ]
+        }
+      },
+      "id": "f53fb2e6-8a64-4e4d-b685-c6a1ec7c348a",
+      "name": "Daily Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1280,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "api-server",
+              "name": "apiServer",
+              "type": "string",
+              "value": "={{$env.ENCOMPASS_API_SERVER}}"
+            },
+            {
+              "id": "token-path",
+              "name": "tokenPath",
+              "type": "string",
+              "value": "={{$env.ENCOMPASS_TOKEN_PATH || '/oauth2/v1/token'}}"
+            },
+            {
+              "id": "instance",
+              "name": "instance",
+              "type": "string",
+              "value": "={{$env.ENCOMPASS_INSTANCE}}"
+            },
+            {
+              "id": "smart-client-user",
+              "name": "smartClientUser",
+              "type": "string",
+              "value": "={{$env.ENCOMPASS_SMART_CLIENT_USER}}"
+            },
+            {
+              "id": "smart-client-password",
+              "name": "smartClientPassword",
+              "type": "string",
+              "value": "={{$env.ENCOMPASS_SMART_CLIENT_PASSWORD}}"
+            },
+            {
+              "id": "client-id",
+              "name": "clientId",
+              "type": "string",
+              "value": "={{$env.ENCOMPASS_CLIENT_ID}}"
+            },
+            {
+              "id": "client-secret",
+              "name": "clientSecret",
+              "type": "string",
+              "value": "={{$env.ENCOMPASS_CLIENT_SECRET}}"
+            },
+            {
+              "id": "loans-path",
+              "name": "loansPath",
+              "type": "string",
+              "value": "={{$env.ENCOMPASS_LOANS_PATH || '/encompass/v3/loans'}}"
+            },
+            {
+              "id": "attachments-path",
+              "name": "attachmentsPathTemplate",
+              "type": "string",
+              "value": "={{$env.ENCOMPASS_ATTACHMENTS_PATH_TEMPLATE || '/encompass/v3/loans/{loan_id}/attachments'}}"
+            },
+            {
+              "id": "download-path",
+              "name": "attachmentDownloadPathTemplate",
+              "type": "string",
+              "value": "={{$env.ENCOMPASS_ATTACHMENT_DOWNLOAD_PATH_TEMPLATE || '/encompass/v3/loans/{loan_id}/attachments/content'}}"
+            },
+            {
+              "id": "download-body-field",
+              "name": "attachmentDownloadBodyField",
+              "type": "string",
+              "value": "={{$env.ENCOMPASS_ATTACHMENT_DOWNLOAD_BODY_FIELD || 'attachmentId'}}"
+            },
+            {
+              "id": "loan-update-path",
+              "name": "loanUpdatePathTemplate",
+              "type": "string",
+              "value": "={{$env.ENCOMPASS_LOAN_UPDATE_PATH_TEMPLATE || '/encompass/v3/loans/{loan_id}'}}"
+            },
+            {
+              "id": "lookback-days",
+              "name": "lookbackDays",
+              "type": "number",
+              "value": "={{Number($env.AGENT_LOOKBACK_DAYS || 31)}}"
+            },
+            {
+              "id": "dry-run",
+              "name": "dryRun",
+              "type": "boolean",
+              "value": "={{String($env.AGENT_DRY_RUN || 'true').toLowerCase() === 'true'}}"
+            },
+            {
+              "id": "ai-endpoint",
+              "name": "aiEndpoint",
+              "type": "string",
+              "value": "={{$env.AI_ENDPOINT || 'https://api.openai.com/v1/chat/completions'}}"
+            },
+            {
+              "id": "ai-key",
+              "name": "aiApiKey",
+              "type": "string",
+              "value": "={{$env.AI_API_KEY}}"
+            },
+            {
+              "id": "ai-model",
+              "name": "aiModel",
+              "type": "string",
+              "value": "={{$env.AI_MODEL || 'gpt-4o-mini'}}"
+            },
+            {
+              "id": "field-mapping",
+              "name": "fieldMapping",
+              "type": "object",
+              "value": "={{JSON.parse($env.FIELD_MAPPING_JSON || '{}')}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b983aebd-cd8a-4b0d-8ae0-a156b49b01bf",
+      "name": "Agent Runtime Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1060,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$json.apiServer.replace(/\\/$/, '') + '/' + $json.tokenPath.replace(/^\\//, '')}}",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "grant_type",
+              "value": "password"
+            },
+            {
+              "name": "instance",
+              "value": "={{$json.instance}}"
+            },
+            {
+              "name": "username",
+              "value": "={{$json.smartClientUser}}"
+            },
+            {
+              "name": "password",
+              "value": "={{$json.smartClientPassword}}"
+            },
+            {
+              "name": "client_id",
+              "value": "={{$json.clientId}}"
+            },
+            {
+              "name": "client_secret",
+              "value": "={{$json.clientSecret}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e03008ca-e80e-468e-9a52-ee168b992dd3",
+      "name": "Get Encompass Token",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -840,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$('Agent Runtime Config').first().json.apiServer.replace(/\\/$/, '') + '/' + $('Agent Runtime Config').first().json.loansPath.replace(/^\\//, '')}}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "modifiedAfter",
+              "value": "={{DateTime.now().minus({ days: $('Agent Runtime Config').first().json.lookbackDays }).toUTC().toISO()}}"
+            },
+            {
+              "name": "createdAfter",
+              "value": "={{DateTime.now().minus({ days: $('Agent Runtime Config').first().json.lookbackDays }).toUTC().toISO()}}"
+            },
+            {
+              "name": "limit",
+              "value": "100"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$json.access_token}}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "dd04b913-510a-46da-9f26-bb8ff7d9fcb2",
+      "name": "Search Recent Loans",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -620,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfg = $('Agent Runtime Config').first().json;\nconst token = $('Get Encompass Token').first().json.access_token;\nconst payload = $input.first().json;\nconst loans = Array.isArray(payload) ? payload : (payload.loans || payload.data || []);\nreturn loans\n  .map((loan) => ({\n    loanId: String(loan.loanId || loan.id || loan.guid || ''),\n    createdAt: loan.createdAt || loan.dateCreated || null,\n    modifiedAt: loan.modifiedAt || loan.lastModified || null,\n  }))\n  .filter((loan) => loan.loanId)\n  .map((loan) => ({ json: { ...cfg, accessToken: token, ...loan } }));"
+      },
+      "id": "fcbe7a6d-8132-43d6-a73d-7ec93c218de5",
+      "name": "Normalize Loans",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$json.apiServer.replace(/\\/$/, '') + '/' + $json.attachmentsPathTemplate.replace('{loan_id}', encodeURIComponent($json.loanId)).replace(/^\\//, '')}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$json.accessToken}}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f45761e2-b54a-49a1-90c6-48a5a0f945a4",
+      "name": "Get Loan Attachments",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -180,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const loans = $('Normalize Loans').all();\nreturn $input.all().flatMap((item, index) => {\n  const loan = loans[index]?.json || {};\n  const payload = item.json;\n  const attachments = Array.isArray(payload) ? payload : (payload.attachments || payload.data || []);\n  return attachments\n    .map((attachment) => ({\n      loanId: loan.loanId,\n      attachmentId: String(attachment.attachmentId || attachment.id || attachment.entityId || ''),\n      title: attachment.title || attachment.name || attachment.documentTitle || '',\n      createdAt: attachment.createdAt || attachment.dateCreated || null,\n      createdBy: attachment.createdBy || attachment.createdByName || attachment.userName || null,\n    }))\n    .filter((attachment) => attachment.loanId && attachment.attachmentId)\n    .map((attachment) => ({ json: { ...loan, ...attachment } }));\n});"
+      },
+      "id": "a573015f-81f1-4ed3-8113-ee450967e81b",
+      "name": "Normalize Attachments",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        40,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nstaticData.processedDocuments = staticData.processedDocuments || {};\nreturn $input.all().map((item) => {\n  const key = `${item.json.loanId}:${item.json.attachmentId}`;\n  return {\n    json: {\n      ...item.json,\n      processedKey: key,\n      processed: Boolean(staticData.processedDocuments[key]),\n      checkedAt: new Date().toISOString(),\n    },\n  };\n});"
+      },
+      "id": "f7307288-9b8f-43a5-b341-119f5335ef0b",
+      "name": "Check Processed Document",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "unprocessed",
+              "leftValue": "={{$json.processed}}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f11e5aae-8d6e-41c5-9694-eb381e96eb3e",
+      "name": "If New Document",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$json.apiServer.replace(/\\/$/, '') + '/' + $json.attachmentDownloadPathTemplate.replace('{loan_id}', encodeURIComponent($json.loanId)).replace(/^\\//, '')}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$json.accessToken}}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/pdf"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "jsonBody": "={{({ [$json.attachmentDownloadBodyField]: $json.attachmentId })}}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "pdf"
+            }
+          }
+        }
+      },
+      "id": "acdd7358-ff94-4ccd-b2cb-1983a41b1364",
+      "name": "Download PDF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        20
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "pdf",
+        "options": {}
+      },
+      "id": "c00f8d48-239f-428e-b1f0-6fe64210dba8",
+      "name": "Extract PDF Text",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        940,
+        20
+      ],
+      "notes": "If your n8n version does not include PDF extraction in this node, replace this step with a PDF parser node or an internal OCR/document AI service."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$('Agent Runtime Config').first().json.aiEndpoint}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$('Agent Runtime Config').first().json.aiApiKey}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "jsonBody": "={{({ model: $('Agent Runtime Config').first().json.aiModel, temperature: 0, response_format: { type: 'json_object' }, messages: [{ role: 'system', content: 'You extract mortgage loan disclosure and fee data. Return only valid JSON. Use null for missing values.' }, { role: 'user', content: 'Extract these fields from the PDF text and return JSON keys exactly as listed: owner_title_insurance_fees, lenders_title_insurance_fees, recording_fees, transfer_taxes, transfer_tax_city, processing_fee, underwriting_fee, voe_fee, appraisal_fee, credit_report_fee, flood_certification, mortgage_insurance_premium, tax_service_fee, homeowners_insurance_premium, prepaid_interest_amount, prepaid_interest_rate, homeowners_insurance_monthly_cost, mortgage_insurance_cost, property_taxes, title_courier_fee, title_escrow_fee, title_lenders_title_insurance_fee, title_loan_tie_in_fee, title_recording_service_fee, title_title_endorsement_fees, sales_contract_price, loan_amount. PDF text: ' + ($json.text || $json.data || $json.content || '') }] })}}",
+        "options": {}
+      },
+      "id": "da6f8437-1241-4a06-94b5-ec7a76fbd7fe",
+      "name": "AI Extract Fields",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1160,
+        20
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const source = $('Check Processed Document').item.json;\nconst response = $input.first().json;\nconst content = response.choices?.[0]?.message?.content || response.content || response.response || JSON.stringify(response);\nlet extractedFields = {};\ntry {\n  extractedFields = typeof content === 'string' ? JSON.parse(content) : content;\n} catch (error) {\n  throw new Error(`AI response was not valid JSON for ${source.processedKey}: ${content}`);\n}\nconst updateFields = {};\nconst mapping = source.fieldMapping || {};\nfor (const [extractionKey, encompassFieldId] of Object.entries(mapping)) {\n  const value = extractedFields[extractionKey];\n  if (encompassFieldId && value !== null && value !== undefined && value !== '') {\n    updateFields[encompassFieldId] = String(value);\n  }\n}\nreturn [{\n  json: {\n    ...source,\n    extractedFields,\n    updateFields,\n    hasMappedFields: Object.keys(updateFields).length > 0,\n    aiExtractedAt: new Date().toISOString(),\n  },\n}];"
+      },
+      "id": "c5af1fa9-3943-414f-a50d-c0bc5598430d",
+      "name": "Build Field Update Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1380,
+        20
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-mapped-fields",
+              "leftValue": "={{$json.hasMappedFields}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f88c6ac3-1668-4778-b979-a7da9c0690e8",
+      "name": "If Mapped Fields Found",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1600,
+        20
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "dry-run-false",
+              "leftValue": "={{$json.dryRun}}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d4c9fa1f-91c3-4faa-ab49-163b269d896d",
+      "name": "If Updates Enabled",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1820,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{$json.apiServer.replace(/\\/$/, '') + '/' + $json.loanUpdatePathTemplate.replace('{loan_id}', encodeURIComponent($json.loanId)).replace(/^\\//, '')}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$json.accessToken}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "jsonBody": "={{({ fields: $json.updateFields })}}",
+        "options": {}
+      },
+      "id": "c8329873-d920-4964-920a-3b7906012874",
+      "name": "Update Encompass Loan Fields",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2040,
+        -180
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const source = $('Build Field Update Payload').item.json;\nconst staticData = $getWorkflowStaticData('global');\nstaticData.processedDocuments = staticData.processedDocuments || {};\nstaticData.processingEvents = staticData.processingEvents || [];\nconst event = {\n  status: source.dryRun ? 'dry_run_processed' : 'processed',\n  loanId: source.loanId,\n  attachmentId: source.attachmentId,\n  title: source.title,\n  createdAt: source.createdAt,\n  createdBy: source.createdBy,\n  extractedFields: source.extractedFields,\n  mappedFields: source.updateFields,\n  processedAt: new Date().toISOString(),\n};\nstaticData.processedDocuments[source.processedKey] = event;\nstaticData.processingEvents.push(event);\nreturn [{ json: event }];"
+      },
+      "id": "ec45dec7-1576-4e71-a27d-d6c9a340649c",
+      "name": "Mark Processed Event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2260,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const source = $('Build Field Update Payload').item.json;\nconst staticData = $getWorkflowStaticData('global');\nstaticData.processingEvents = staticData.processingEvents || [];\nconst event = {\n  status: 'failed_no_mapped_fields',\n  loanId: source.loanId,\n  attachmentId: source.attachmentId,\n  title: source.title,\n  message: 'AI extraction did not produce any values with configured Encompass field mappings.',\n  extractedFields: source.extractedFields,\n  processedAt: new Date().toISOString(),\n};\nstaticData.processingEvents.push(event);\nreturn [{ json: event }];"
+      },
+      "id": "f0cf0a49-21ff-4130-a487-d2aa55484f8a",
+      "name": "Log No Mapped Fields",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1820,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    status: 'skipped_already_processed',\n    loanId: $json.loanId,\n    attachmentId: $json.attachmentId,\n    title: $json.title,\n    skippedAt: new Date().toISOString(),\n  },\n}];"
+      },
+      "id": "df715d13-e4bc-464e-8e68-d01fedcb6f20",
+      "name": "Log Already Processed Skip",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        220
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Daily Schedule": {
+      "main": [
+        [
+          {
+            "node": "Agent Runtime Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent Runtime Config": {
+      "main": [
+        [
+          {
+            "node": "Get Encompass Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Encompass Token": {
+      "main": [
+        [
+          {
+            "node": "Search Recent Loans",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Recent Loans": {
+      "main": [
+        [
+          {
+            "node": "Normalize Loans",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Loans": {
+      "main": [
+        [
+          {
+            "node": "Get Loan Attachments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Loan Attachments": {
+      "main": [
+        [
+          {
+            "node": "Normalize Attachments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Attachments": {
+      "main": [
+        [
+          {
+            "node": "Check Processed Document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Processed Document": {
+      "main": [
+        [
+          {
+            "node": "If New Document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If New Document": {
+      "main": [
+        [
+          {
+            "node": "Download PDF",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Already Processed Skip",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download PDF": {
+      "main": [
+        [
+          {
+            "node": "Extract PDF Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract PDF Text": {
+      "main": [
+        [
+          {
+            "node": "AI Extract Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Extract Fields": {
+      "main": [
+        [
+          {
+            "node": "Build Field Update Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Field Update Payload": {
+      "main": [
+        [
+          {
+            "node": "If Mapped Fields Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Mapped Fields Found": {
+      "main": [
+        [
+          {
+            "node": "If Updates Enabled",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log No Mapped Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Updates Enabled": {
+      "main": [
+        [
+          {
+            "node": "Update Encompass Loan Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark Processed Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Encompass Loan Fields": {
+      "main": [
+        [
+          {
+            "node": "Mark Processed Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveDataSuccessExecution": "all",
+    "saveDataErrorExecution": "all"
+  },
+  "versionId": "8e0c3937-617a-44d4-95e8-a5f08b4b1f3e",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
