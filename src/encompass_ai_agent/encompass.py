@@ -119,9 +119,16 @@ class EncompassClient:
     def download_attachment_pdf(self, loan_id: str, attachment_id: str, destination: Path) -> Path:
         url_path = self.config.endpoints.attachment_download_path_template.format(
             loan_id=urllib.parse.quote(loan_id),
-            attachment_id=urllib.parse.quote(attachment_id),
         )
-        content = self._request_bytes_path(url_path)
+        body = json.dumps(
+            {self.config.endpoints.attachment_download_body_field: attachment_id}
+        ).encode("utf-8")
+        content = self._request_bytes_path(
+            url_path,
+            method="POST",
+            body=body,
+            headers={"Content-Type": "application/json"},
+        )
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(content)
         return destination
@@ -150,8 +157,20 @@ class EncompassClient:
     ) -> dict[str, Any] | list[Any]:
         return self._request(self._build_url(path), method=method, body=body, headers=headers)
 
-    def _request_bytes_path(self, path: str) -> bytes:
-        return self._request_bytes(self._build_url(path))
+    def _request_bytes_path(
+        self,
+        path: str,
+        *,
+        method: str = "GET",
+        body: bytes | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> bytes:
+        return self._request_bytes(
+            self._build_url(path),
+            method=method,
+            body=body,
+            headers=headers,
+        )
 
     def _build_url(self, path: str) -> str:
         if path.startswith("http://") or path.startswith("https://"):

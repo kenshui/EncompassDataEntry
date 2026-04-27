@@ -169,9 +169,15 @@ these without code changes:
 ENCOMPASS_TOKEN_PATH=/oauth2/v1/token
 ENCOMPASS_LOANS_PATH=/encompass/v3/loans
 ENCOMPASS_ATTACHMENTS_PATH_TEMPLATE=/encompass/v3/loans/{loan_id}/attachments
-ENCOMPASS_ATTACHMENT_DOWNLOAD_PATH_TEMPLATE=/encompass/v3/loans/{loan_id}/attachments/{attachment_id}/content
+ENCOMPASS_ATTACHMENT_DOWNLOAD_PATH_TEMPLATE=/encompass/v3/loans/{loan_id}/attachments/content
+ENCOMPASS_ATTACHMENT_DOWNLOAD_BODY_FIELD=attachmentId
 ENCOMPASS_LOAN_UPDATE_PATH_TEMPLATE=/encompass/v3/loans/{loan_id}
 ```
+
+PDF downloads POST the selected attachment ID in the JSON request body as
+`{"attachmentId": "..."}` by default. Override
+`ENCOMPASS_ATTACHMENT_DOWNLOAD_BODY_FIELD` if a customer's gateway expects a
+different JSON property name.
 
 Validate these paths against the customer's Encompass API version before
 production use.

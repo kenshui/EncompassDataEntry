@@ -32,8 +32,9 @@ class EndpointConfig:
     loans_path: str = "/encompass/v3/loans"
     attachments_path_template: str = "/encompass/v3/loans/{loan_id}/attachments"
     attachment_download_path_template: str = (
-        "/encompass/v3/loans/{loan_id}/attachments/{attachment_id}/content"
+        "/encompass/v3/loans/{loan_id}/attachments/content"
     )
+    attachment_download_body_field: str = "attachmentId"
     loan_update_path_template: str = "/encompass/v3/loans/{loan_id}"
     modified_after_query_param: str = "modifiedAfter"
     created_after_query_param: str = "createdAfter"
@@ -98,7 +99,10 @@ def load_config(env: dict[str, str] | None = None) -> AgentConfig:
             ),
             attachment_download_path_template=values.get(
                 "ENCOMPASS_ATTACHMENT_DOWNLOAD_PATH_TEMPLATE",
-                "/encompass/v3/loans/{loan_id}/attachments/{attachment_id}/content",
+                "/encompass/v3/loans/{loan_id}/attachments/content",
+            ),
+            attachment_download_body_field=values.get(
+                "ENCOMPASS_ATTACHMENT_DOWNLOAD_BODY_FIELD", "attachmentId"
             ),
             loan_update_path_template=values.get(
                 "ENCOMPASS_LOAN_UPDATE_PATH_TEMPLATE",
